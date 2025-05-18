@@ -6,83 +6,159 @@
     <title>Music Key Detector</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
-        .chord-input {
-            font-family: 'Courier New', monospace;
+        body {
+            background: #18181b;
+            color: #f3f4f6;
         }
-        .result-card {
-            transition: all 0.3s ease;
+        .dark-bg {
+            background: #27272a;
         }
-        .result-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        .chord-chip {
+            background: #3b3b4f;
+            color: #f3f4f6;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+            font-weight: 500;
+        }
+        .chord-chip-remove {
+            cursor: pointer;
+            margin-left: 0.5rem;
+            color: #f87171;
+        }
+        .dropdown {
+            background: #27272a;
+            color: #f3f4f6;
+        }
+        .dropdown option {
+            background: #27272a;
+            color: #f3f4f6;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen">
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-2xl mx-auto">
-            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Music Key Detector</h1>
-            
-            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h1 class="text-4xl font-bold text-center mb-8">Music Key Detector</h1>
+            <div class="dark-bg rounded-lg shadow-lg p-6 mb-8">
                 <div class="mb-4">
-                    <label for="chordInput" class="block text-gray-700 text-sm font-bold mb-2">
-                        Enter your chord progression:
+                    <label for="chordDropdown" class="block text-sm font-bold mb-2">
+                        Build your chord progression:
                     </label>
-                    <input type="text" 
-                           id="chordInput" 
-                           class="chord-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           placeholder="e.g., C Em G or Dm F Bmb5 (diminished: mb5, m-5, or dim)"
-                           autocomplete="off">
+                    <div class="flex items-center space-x-2 mb-4">
+                        <select id="chordDropdown" class="dropdown px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <!-- Chord options will be inserted by JS -->
+                        </select>
+                        <button onclick="addChord()" class="bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">Add Chord</button>
+                        <button onclick="removeLastChord()" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors">Remove Last</button>
+                        <button onclick="clearProgression()" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-colors">Clear</button>
+                    </div>
+                    <div id="progressionDisplay" class="mb-2 flex flex-wrap"></div>
                 </div>
                 <button onclick="analyzeChords()" 
                         class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
                     Analyze
                 </button>
             </div>
-
             <div id="results" class="space-y-4">
                 <!-- Results will be inserted here -->
             </div>
         </div>
     </div>
-
     <script>
+        // Chord list: all major, minor, diminished, sharps, flats
+        const chordRoots = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
+        const chordTypes = ["", "m", "dim"];
+        const chords = [];
+        chordRoots.forEach(root => {
+            chordTypes.forEach(type => {
+                if (!(type === "dim" && (root.endsWith("#") || root.endsWith("b")))) { // avoid e.g. C#dim, Bbdim if not in your system
+                    chords.push(root + type);
+                }
+            });
+        });
+        // Add mb5 and m-5 diminished notations for each root
+        chordRoots.forEach(root => {
+            chords.push(root + "mb5");
+            chords.push(root + "m-5");
+        });
+        // Populate dropdown
+        const dropdown = document.getElementById('chordDropdown');
+        chords.forEach(chord => {
+            const option = document.createElement('option');
+            option.value = chord;
+            option.textContent = chord;
+            dropdown.appendChild(option);
+        });
+        // Progression state
+        let progression = [];
+        function addChord() {
+            const chord = dropdown.value;
+            progression.push(chord);
+            renderProgression();
+        }
+        function removeLastChord() {
+            progression.pop();
+            renderProgression();
+        }
+        function clearProgression() {
+            progression = [];
+            renderProgression();
+        }
+        function removeChordAt(idx) {
+            progression.splice(idx, 1);
+            renderProgression();
+        }
+        function renderProgression() {
+            const display = document.getElementById('progressionDisplay');
+            display.innerHTML = '';
+            progression.forEach((chord, idx) => {
+                const chip = document.createElement('span');
+                chip.className = 'chord-chip';
+                chip.textContent = chord;
+                // Add remove X
+                const remove = document.createElement('span');
+                remove.className = 'chord-chip-remove';
+                remove.textContent = '×';
+                remove.onclick = () => removeChordAt(idx);
+                chip.appendChild(remove);
+                display.appendChild(chip);
+            });
+        }
         function analyzeChords() {
-            const chordInput = document.getElementById('chordInput');
             const resultsDiv = document.getElementById('results');
-            
             // Show loading state
-            resultsDiv.innerHTML = '<div class="text-center text-gray-600">Analyzing...</div>';
-            
+            resultsDiv.innerHTML = '<div class="text-center text-gray-400">Analyzing...</div>';
             fetch('/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    chords: chordInput.value
+                    chords: progression.join(' ')
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.results.length === 0) {
                     resultsDiv.innerHTML = `
-                        <div class="bg-white rounded-lg shadow-lg p-6 text-center text-gray-600">
+                        <div class="dark-bg rounded-lg shadow-lg p-6 text-center text-gray-400">
                             No matching keys found for this progression.
                         </div>
                     `;
                     return;
                 }
-
                 resultsDiv.innerHTML = data.results.map(result => `
-                    <div class="result-card bg-white rounded-lg shadow-lg p-6">
-                        <h2 class="text-xl font-bold text-gray-800 mb-4">${result.key}</h2>
+                    <div class="result-card dark-bg rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold mb-4">${result.key}</h2>
                         <div class="space-y-2">
                             ${result.progression.map(p => `
                                 <div class="flex items-center space-x-2">
                                     <span class="font-mono text-lg">${p.chord}</span>
-                                    <span class="text-gray-500">→</span>
-                                    <span class="font-bold text-blue-600">${p.roman}</span>
+                                    <span class="text-gray-400">→</span>
+                                    <span class="font-bold text-blue-400">${p.roman}</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -98,13 +174,6 @@
                 console.error('Error:', error);
             });
         }
-
-        // Allow Enter key to trigger analysis
-        document.getElementById('chordInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                analyzeChords();
-            }
-        });
     </script>
 </body>
-</html> 
+</html>
