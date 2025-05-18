@@ -52,20 +52,26 @@ def normalize_chord(chord):
     """
     Normalize chord notation for comparison.
     Converts 'm♭5', 'mb5', or 'm-5' to 'dim' and normalizes flat notation.
+    Preserves root note case.
     """
     if not chord:
         return None
-        
-    # Convert to lowercase and remove whitespace
-    chord = chord.lower().strip()
-    
-    # Normalize flat notation (replace ♭ with b)
-    chord = chord.replace('♭', 'b')
-    
-    # Regex: replace root + (mb5|m-5|m♭5) with root + dim
-    chord = re.sub(r'^([a-g][#b]?)(mb5|m-5|m♭5)$', r'\1dim', chord)
-    
-    return chord
+
+    chord = chord.strip().replace('♭', 'b')
+
+    # Regex: root (A-G, optional #/b), then suffix
+    m = re.match(r'^([A-G][#b]?)(.*)$', chord)
+    if not m:
+        return chord  # fallback
+
+    root, suffix = m.groups()
+    suffix = suffix.lower()
+
+    # Normalize diminished notations
+    if suffix in ['mb5', 'm-5', 'm♭5']:
+        suffix = 'dim'
+
+    return root + suffix
 
 def get_csv_template():
     """
