@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Key Detector</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .chord-input {
+            font-family: 'Courier New', monospace;
+        }
+        .result-card {
+            transition: all 0.3s ease;
+        }
+        .result-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <h1 class="text-4xl font-bold text-center text-gray-800 mb-8">Music Key Detector</h1>
+            
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="mb-4">
+                    <label for="chordInput" class="block text-gray-700 text-sm font-bold mb-2">
+                        Enter your chord progression:
+                    </label>
+                    <input type="text" 
+                           id="chordInput" 
+                           class="chord-input w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="e.g., C Em G or Eb Ab Bb"
+                           autocomplete="off">
+                </div>
+                <button onclick="analyzeChords()" 
+                        class="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors">
+                    Analyze
+                </button>
+            </div>
+
+            <div id="results" class="space-y-4">
+                <!-- Results will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function analyzeChords() {
+            const chordInput = document.getElementById('chordInput');
+            const resultsDiv = document.getElementById('results');
+            
+            // Show loading state
+            resultsDiv.innerHTML = '<div class="text-center text-gray-600">Analyzing...</div>';
+            
+            fetch('/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chords: chordInput.value
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="bg-white rounded-lg shadow-lg p-6 text-center text-gray-600">
+                            No matching keys found for this progression.
+                        </div>
+                    `;
+                    return;
+                }
+
+                resultsDiv.innerHTML = data.results.map(result => `
+                    <div class="result-card bg-white rounded-lg shadow-lg p-6">
+                        <h2 class="text-xl font-bold text-gray-800 mb-4">${result.key}</h2>
+                        <div class="space-y-2">
+                            ${result.progression.map(p => `
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-mono text-lg">${p.chord}</span>
+                                    <span class="text-gray-500">→</span>
+                                    <span class="font-bold text-blue-600">${p.roman}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        An error occurred. Please try again.
+                    </div>
+                `;
+                console.error('Error:', error);
+            });
+        }
+
+        // Allow Enter key to trigger analysis
+        document.getElementById('chordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeChords();
+            }
+        });
+    </script>
+</body>
+</html> 
