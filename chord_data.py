@@ -1,5 +1,6 @@
 import csv
 from pathlib import Path
+import re
 
 def load_chord_data(major_csv_path, minor_csv_path):
     """
@@ -50,20 +51,19 @@ def load_chord_data(major_csv_path, minor_csv_path):
 def normalize_chord(chord):
     """
     Normalize chord notation for comparison.
-    Converts m♭5 to dim and handles other variations.
-    Also normalizes flat notations (♭ and b).
+    Converts 'm♭5', 'mb5', or 'm-5' to 'dim' and normalizes flat notation.
     """
-    # Convert to lowercase and remove any whitespace
+    if not chord:
+        return None
+        
+    # Convert to lowercase and remove whitespace
     chord = chord.lower().strip()
     
-    # Handle diminished chords
-    if 'm♭5' in chord:
-        return chord.replace('m♭5', 'dim')
-    elif 'm♭5' in chord:
-        return chord.replace('m♭5', 'dim')
-    
-    # Normalize flat notation
+    # Normalize flat notation (replace ♭ with b)
     chord = chord.replace('♭', 'b')
+    
+    # Regex: replace root + (mb5|m-5|m♭5) with root + dim
+    chord = re.sub(r'^([a-g][#b]?)(mb5|m-5|m♭5)$', r'\1dim', chord)
     
     return chord
 
